@@ -4,6 +4,8 @@ const POSITION = require('../model/position');
 const TYPEEMPLOYRR = require('../model/type_employee');
 const httpResponseUtil = require('../lib/http_response_Util');
 const generalUtil = require('../lib/general_Util');
+const EDUCATIONLEVEL = require('../model/education_level');
+const SPECIALITY = require('../model/speciality');
 let router = express.Router();
 
 router.get('/departments', function(req, res) {
@@ -77,5 +79,30 @@ router.get('/positions', function(req, res) {
     //     httpResponseUtil.generateResponse('COMMON.SUCCESSFULLY', true, success, res);
     // })
 })
-
+router.get('/educationlevel', function(req, res) {
+    EDUCATIONLEVEL.aggregate([
+        {
+            $project: {
+                _id: 1,
+                education_level_name: 1,
+                education_level_code: 1
+            }
+        }
+    ]).then(success=> {
+        httpResponseUtil.generateResponse('COMMON.SUCCESSFULLY', true, success, res);
+    })
+})
+router.get('/speciality', function(req, res) {
+    SPECIALITY.aggregate([
+        {
+            $project: {
+                _id: 1,
+                speciality_name: 1,
+                speciality_code: 1
+            }
+        }
+    ]).then(success=> {
+        httpResponseUtil.generateResponse('COMMON.SUCCESSFULLY', true, success, res);
+    })
+})
 module.exports = router;

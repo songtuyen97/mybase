@@ -14,7 +14,7 @@ let formSchema = new Schema({
         type: String,
         required: false
     },
-    create_at: {
+    created_at: {
         type: Date,
         default: new Date()
     }

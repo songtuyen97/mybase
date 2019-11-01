@@ -21,6 +21,10 @@ let dayOTSchema = new Schema({
     coefficient: {
         type: Number,
         required: false
+    },
+    license: {
+        type: Boolean,
+        required: false
     }
 })
 

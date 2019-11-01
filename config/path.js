@@ -1,4 +1,5 @@
 let path = {
-    avatar: 'avatar'
+    avatar: 'avatar',
+    files: 'files'
 }
 module.exports = path;

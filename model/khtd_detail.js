@@ -10,6 +10,10 @@ let khtdDetailSchema = new Schema({
         type: Number,
         required: false
     },
+    number_man: {
+        type: Number,
+        required: false
+    },
     department_id: {
         type: mongoose.Types.ObjectId,
         required: false
@@ -45,7 +49,30 @@ let khtdDetailSchema = new Schema({
     licensed: {
         type: Boolean,
         required: false
+    },
+    experience_year: {
+        type: Number,
+        required: false
+    },
+    // different_required: {
+    //     type: String,
+    //     required: false
+    // },
+    note: {
+        type: String,
+        required: false
+    },
+    age_from: {
+        type: Number,
+        required: false
+    },
+    age_to: {
+        type: Number,
+        required: false
+    },
+    created_at: {
+        type: Date,
+        required: false
     }
 })
-
 module.exports = mongoose.model('khtd_detail', khtdDetailSchema);

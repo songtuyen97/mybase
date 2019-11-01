@@ -11,6 +11,7 @@ const objectID = require('mongoose').Types.ObjectId;
 const DEPARTMENT = require('../model/department');
 const POSITION = require('../model/position');
 const TYPE_EMPLOYEE = require('../model/type_employee');
+const EDUCATION_LEVEL = require('../model/education_level');
 let router = express.Router();
 
 router.post('/login', function(req, res) {
@@ -164,7 +165,9 @@ router.post('/register', function(req, res) {
             "first_name",
             "department_id",
             "position_id",
-            "type_employee_id"
+            "type_employee_id",
+            "phonenumber",
+            "start_day"
           ];
           let missingFields = [];
           requiredFields.forEach(function(elem) {
@@ -200,6 +203,17 @@ router.post('/register', function(req, res) {
           ) {
             wrongTypeOfFields.push("repassword");
           }
+          if (
+            typeof req.body["start_day"] !== "string"
+            // req.body["start_day"].length < constants.minLengthUsername
+          ) {
+            wrongTypeOfFields.push("start_day");
+          }
+          if (
+            typeof req.body["phonenumber"] !== "string"
+          ) {
+            wrongTypeOfFields.push("phonenumber");
+          }
           if (typeof req.body["first_name"] !== "string") {
             wrongTypeOfFields.push("first_name");
           }
@@ -211,6 +225,9 @@ router.post('/register', function(req, res) {
           }
           if (objectID.isValid(req.body["type_employee_id"]) === false) {
             wrongTypeOfFields.push("type_employee_id");
+          }
+          if (req.body["education_level_id"] && objectID.isValid(req.body["education_level_id"]) === false) {
+            wrongTypeOfFields.push("education_level_id");
           }
           if (wrongTypeOfFields.length > 0) {
             callback("COMMON.INVALID_DATA", wrongTypeOfFields);
@@ -293,6 +310,26 @@ router.post('/register', function(req, res) {
             }
             if (department === null) {
               callback("COMMON.INVALID_DATA", "type_employee_id");
+              return;
+            }
+            callback(null);
+          });
+        },
+        /**
+         * check exist of type_employee_id
+         */
+        function(callback) {
+          if(!req.body["education_level_id"]) {
+            callback(null);
+            return;
+          }
+          EDUCATION_LEVEL.findOne({ _id: req.body["education_level_id"] }, function(err, department) {
+            if (err) {
+              callback("ERROR_SERVER", null);
+              return;
+            }
+            if (department === null) {
+              callback("COMMON.INVALID_DATA", "education_level_id");
               return;
             }
             callback(null);

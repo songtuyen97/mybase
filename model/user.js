@@ -41,11 +41,23 @@ let userSchema = new Schema({
         type: mongoose.Types.ObjectId,
         required: false
     },
+    education_level_id: {
+        type: mongoose.Types.ObjectId,
+        required: false
+    },
     avatar: {
         type: String,
         required: false
     },
     dob: {
+        type: Date,
+        required: false
+    },
+    start_day: {
+        type: Date,
+        required: false
+    },
+    end_day: {
         type: Date,
         required: false
     },
@@ -105,8 +117,16 @@ let userSchema = new Schema({
         type: Date,
         required: false
     },
-    update_at: {
+    updated_at: {
         type: Date,
+        required: false
+    },
+    khtd_id: {
+        type: mongoose.Types.ObjectId,
+        required: false
+    },
+    mentor_id: {
+        type: mongoose.Types.ObjectId,
         required: false
     }
 })

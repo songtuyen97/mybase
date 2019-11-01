@@ -9,6 +9,7 @@ const objectID = require('mongoose').Types.ObjectId;
 const DEPARTMENT = require('../model/department');
 const POSITION = require('../model/position');
 const TYPE_EMPLOYEE = require('../model/type_employee');
+const EDUCATION_LEVEL = require('../model/education_level');
 const multer = require('multer');
 const path = require('../config/path');
 let router = express.Router();
@@ -207,11 +208,17 @@ router.put('/:user_id', function(req, res) {
                 if(req.body['position_id'] !== undefined && req.body['position_id'].length > 0 && objectID.isValid(req.body['position_id']) === false) {
                     wrongFields.push('position_id');
                 }
+                if(req.body['education_level_id'] !== undefined && req.body['education_level_id'].length > 0 && objectID.isValid(req.body['education_level_id']) === false) {
+                    wrongFields.push('education_level_id');
+                }
                 if(req.body['type_employee_id'] !== undefined && req.body['type_employee_id'].length > 0 && objectID.isValid(req.body['type_employee_id']) === false) {
                     wrongFields.push('type_employee_id');
                 }
                 if(req.body['dob'] !== undefined && req.body['dob'].length > 0 && typeof req.body['dob'] !== 'string') {
                     wrongFields.push('dob');
+                }
+                if(req.body['start_day'] !== undefined && req.body['start_day'].length > 0 && typeof req.body['start_day'] !== 'string') {
+                    wrongFields.push('start_day');
                 }
                 if(req.body['address'] !== undefined && req.body['address'].length > 0 && typeof req.body['address'] !== 'string') {
                     wrongFields.push('address');
@@ -236,7 +243,9 @@ router.put('/:user_id', function(req, res) {
                 if(req.body['note'] !== undefined && req.body['note'].length > 0 && typeof req.body['note'] !== 'string') {
                     wrongFields.push('note');
                 }
-                
+                if(req.body['identity_number'] !== undefined && req.body['identity_number'].length > 0 && typeof req.body['identity_number'] !== 'string') {
+                    wrongFields.push('identity_number');
+                }
                 if(wrongFields.length > 0) {
                     callback('COMMON.INVALID_DATA', wrongFields);
                     return;
@@ -301,6 +310,25 @@ router.put('/:user_id', function(req, res) {
                 })
             },
             /**
+             * check exist of education_level_id
+             */
+            function(callback) {
+                if(req.body['education_level_id'] === undefined || req.body['education_level_id'] === null) {
+                    return callback(null);
+                }
+                EDUCATION_LEVEL.findOne({_id: req.body['education_level_id']}, function(err, department) {
+                    if(err) {
+                        callback('ERROR_SERVER', null);
+                        return;
+                    }
+                    if(department === null) {
+                        callback('COMMON.INVALID_DATA', 'education_level_id');
+                        return;
+                    }
+                    callback(null);
+                })
+            },
+            /**
              * get own profile
              * @param {*} callback 
              */
@@ -328,6 +356,7 @@ router.put('/:user_id', function(req, res) {
                 user['position_id'] = req.body['position_id'] ? req.body['position_id'] : user['position_id'];
                 user['type_employee_id'] = req.body['type_employee_id'] ? req.body['type_employee_id'] : user['type_employee_id'];
                 user['dob'] = req.body['dob'] ? req.body['dob'] : user['dob'];
+                user['start_day'] = req.body['start_day'] ? req.body['start_day'] : user['start_day'];
                 user['address'] = req.body['address'] ? req.body['address'] : user['address'];
                 user['resident_address'] = req.body['resident_address'] ? req.body['resident_address'] : user['resident_address'];
                 user['phonenumber'] = req.body['phonenumber'] ? req.body['phonenumber'] : user['phonenumber'];
@@ -336,8 +365,10 @@ router.put('/:user_id', function(req, res) {
                 user['ethnic_group'] = req.body['ethnic_group'] ? req.body['ethnic_group'] : user['ethnic_group'];
                 user['note'] = req.body['note'] ? req.body['note'] : user['note'];
                 user['working'] = req.body['working'] !== undefined ? req.body['working'] : user['working'];
-                console.log(user['working']+'/'+req.body['working']);
+                // console.log(user['working']+'/'+req.body['working']);
                 user['gender'] = req.body['gender'] ? req.body['gender'] : user['gender'];
+                user['education_level_id'] = req.body['education_level_id'] ? req.body['education_level_id'] : user['education_level_id'];
+                user['identity_number'] = req.body['identity_number'] ? req.body['identity_number'] : user['identity_number'];
                 let userUpdated = new USER(user);
                 userUpdated.save(function(err) {
                     if(err) {
@@ -410,7 +441,10 @@ function queryBaseInformationAggregate(req) {
                 nationality: 1,
                 ethnic_group: 1,
                 note: 1,
-                working: 1
+                working: 1,
+                identity_number: 1,
+                education_level_id: 1,
+                start_day: 1
             }
         },
         {
@@ -445,6 +479,9 @@ function queryBaseInformationAggregate(req) {
                 nationality: 1,
                 ethnic_group: 1,
                 note: 1,
+                identity_number: 1,
+                education_level_id: 1,
+                start_day: 1,
                 department_name: '$department.department_name',
                 department_code: '$department.department_code',
                 working: 1
@@ -484,6 +521,9 @@ function queryBaseInformationAggregate(req) {
                 note: 1,
                 department_name: 1,
                 department_code: 1,
+                identity_number: 1,
+                education_level_id: 1,
+                start_day: 1,
                 position_name: '$position.position_name',
                 position_code: '$position.position_code',
                 working: 1
@@ -525,6 +565,9 @@ function queryBaseInformationAggregate(req) {
                 department_code: 1,
                 position_name: 1,
                 position_code: 1,
+                identity_number: 1,
+                education_level_id: 1,
+                start_day: 1,
                 type_employee_name: '$type_employee.type_employee_name',
                 type_employee_code: '$type_employee.type_employee_code',
                 working: 1
@@ -541,6 +584,7 @@ function queryBaseInformationAggregate(req) {
     if(department_.department_id !== undefined && department_.department_id !== null) {
         baseAggre = baseAggre.concat(departmentAggre);
     }
+    // console.log(offsetLimitValue_);
     let limitAggre = [
         {
             $skip: offsetLimitValue_.offset

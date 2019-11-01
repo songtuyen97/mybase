@@ -1,0 +1,7 @@
+Xây dựng Website bán quần áo qua mạng.
+xây dựng website quản lý nhân viên trong cty abc.
+Xây dựng Website bán phụ kiện máy tính qua mạng.
+Xây dựng hệ thống chợ online trên nền tảng di động
+Xây dựng website bán quần áo thời trang
+Xây dựng ứng dụng quản lý bất động sản cho thuê
+Xây dựng hệ thống website streaming game
