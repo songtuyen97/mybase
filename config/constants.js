@@ -13,6 +13,15 @@ let constants = {
     hours_offafternoon: 4,
     coefficientNormal: 1.5,
     coefficientWeekend: 2,
-    coefficientHoliday: 3
+    coefficientHoliday: 3,
+    format_title_crawl_gmail: 'DANG KY',
+    message_individual: {
+        type_message_name: 'Ca nhan',
+        type_message_code: 'INDIVIDUAL'
+    },
+    message_group: {
+        type_message_name: 'nhom',
+        type_message_code: 'GROUP'
+    }
 }
 module.exports = constants;

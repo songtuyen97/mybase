@@ -39,8 +39,8 @@ router.get("/", function(req, res) {
     );
     return;
   }
-  let monthQuery_ = new Date(year + "-" + month);
-  let nextMonthQuery_ = (Number(month) + 1 <= 12) ? new Date(year + "-" + (Number(month) + 1)) : new Date((year + 1) + "-" + 1);
+  let monthQuery_ = new Date(year + "-" + month + "-" + "1");
+  let nextMonthQuery_ = (Number(month) + 1 <= 12) ? new Date(year + "-" + (Number(month) + 1) + "-" + "1") : new Date((year + 1) + "-" + 1 + "-" + "1");
   async.waterfall(
     [
       function(callback) {
@@ -504,8 +504,8 @@ router.put("/advancepayment/:user_id", function(req, res) {
       },
       function(callback) {
         let monthQuery_ = new Date(req.body["date"]);
-        let nextMonthQuery_ = monthQuery_.getMonth() + 2 <= 12 ? new Date(monthQuery_.getFullYear() + "-" + (monthQuery_.getMonth() + 2)) : 
-                              new Date((monthQuery_.getFullYear() + 1) + "-" + 1);
+        let nextMonthQuery_ = monthQuery_.getMonth() + 2 <= 12 ? new Date(monthQuery_.getFullYear() + "-" + (monthQuery_.getMonth() + 2) + "-" + 1) : 
+                              new Date((monthQuery_.getFullYear() + 1) + "-" + 1 + "-" + 1);
         ADVANCE_PAYMENT.findOneAndUpdate(
           {user_id: user_id, date: {$gte: monthQuery_, $lt: nextMonthQuery_}}, 
           {advance_payment_money: req.body["advance_payment_money"]}, function(
@@ -573,8 +573,9 @@ router.get('/timekeeping', function(req, res) {
     );
     return;
   }
-  let monthQuery_ = new Date(year + "-" + month);
-  let nextMonthQuery_ = new Date(year + "-" + (Number(month) + 1));
+  let monthQuery_ = new Date(year + "-" + month + '-' + '1');
+  let nextMonthQuery_ = (Number(month) + 1 <= 12) ? new Date(year + "-" + (Number(month) + 1) + '-' + '1' ) : new Date((year + 1) + "-" + 1 + '-' + '1' );
+  // console.log(monthQuery_.toJSON() +'/'+ nextMonthQuery_.toISOString());
   async.waterfall(
     [
       function(callback) {
@@ -749,6 +750,10 @@ router.put('/timekeeping/:user_id', function(req, res) {
         callback('COMMON.INVALID_DATA', wrongFields);
         return;
       }
+      //change type date
+      // let date = new Date(req.body["date"]);
+      // req.body["date"] = new Date(date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate());
+      // console.log('put:'+ req.body["date"].toISOString());
       callback(null);
     },
     function(callback) {
@@ -864,6 +869,8 @@ router.put('/timekeeping/ot/:user_id', function(req, res) {
         callback('COMMON.INVALID_DATA', wrongFields);
         return;
       }
+      // let date = new Date(req.body["date"]);
+      // req.body["date"] = new Date(date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate());
       callback(null);
     },
     function(callback) {

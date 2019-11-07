@@ -99,7 +99,13 @@ router.post('/:user_id/avatar', function(req, res) {
 })
 router.get('/', function(req, res) {
     USER.aggregate(
-        [{
+        [
+        {
+            $match: {
+                _id: {$ne: objectID(req.user_id)}
+            }
+        },
+        {
             $project: {
                 first_name: 1,
                 last_name: 1,
@@ -444,7 +450,8 @@ function queryBaseInformationAggregate(req) {
                 working: 1,
                 identity_number: 1,
                 education_level_id: 1,
-                start_day: 1
+                start_day: 1,
+                fullname: 1
             }
         },
         {
@@ -484,7 +491,8 @@ function queryBaseInformationAggregate(req) {
                 start_day: 1,
                 department_name: '$department.department_name',
                 department_code: '$department.department_code',
-                working: 1
+                working: 1,
+                fullname: 1
             }
         },
         {
@@ -526,7 +534,8 @@ function queryBaseInformationAggregate(req) {
                 start_day: 1,
                 position_name: '$position.position_name',
                 position_code: '$position.position_code',
-                working: 1
+                working: 1,
+                fullname: 1
             }
         },
         {
@@ -570,7 +579,8 @@ function queryBaseInformationAggregate(req) {
                 start_day: 1,
                 type_employee_name: '$type_employee.type_employee_name',
                 type_employee_code: '$type_employee.type_employee_code',
-                working: 1
+                working: 1,
+                fullname: 1
             }
         }
     ]

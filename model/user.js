@@ -26,7 +26,10 @@ let userSchema = new Schema({
     tokens: [
         String
     ],
-    socket_id: [
+    socket_notification_id: [
+        String
+    ],
+    socket_chat_id: [
         String
     ],
     department_id: {
