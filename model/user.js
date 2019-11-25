@@ -32,6 +32,16 @@ let userSchema = new Schema({
     socket_chat_id: [
         String
     ],
+    active_message: {
+        active: {
+            type: Boolean,
+            required: false
+        },
+        date: {
+            type: Date,
+            required: false
+        }
+    },
     department_id: {
         type: mongoose.Types.ObjectId,
         required: false
@@ -130,6 +140,10 @@ let userSchema = new Schema({
     },
     mentor_id: {
         type: mongoose.Types.ObjectId,
+        required: false
+    },
+    role_code: {
+        type: String,
         required: false
     }
 })

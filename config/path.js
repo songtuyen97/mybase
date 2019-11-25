@@ -1,5 +1,6 @@
 let path = {
     avatar: 'avatar',
-    files: 'files'
+    files: 'files',
+    slideshow: 'slideshow'
 }
 module.exports = path;

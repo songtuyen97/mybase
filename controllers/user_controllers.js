@@ -12,6 +12,8 @@ const TYPE_EMPLOYEE = require('../model/type_employee');
 const EDUCATION_LEVEL = require('../model/education_level');
 const multer = require('multer');
 const path = require('../config/path');
+const constants = require('../config/constants');
+const bcrypt = require('bcrypt');
 let router = express.Router();
 
 let storage = multer.diskStorage({
@@ -25,8 +27,7 @@ let storage = multer.diskStorage({
             cb('COMMON.INVALID_DATA');
             return;
         }
-        let fileName = path.avatar + '_' + user_id + '_' + file.originalname;
-
+        let fileName = path.avatar + '_' + user_id;
         cb(null, fileName);
     }
 })
@@ -36,9 +37,8 @@ let upload = multer({
 
     // }
 }).single('avatar');
-router.post('/:user_id/avatar', function(req, res) {
+router.put('/:user_id/avatar', function(req, res) {
     let user_id = req.params['user_id'];
-
     async.waterfall([
         /**
          * check existing of user_id
@@ -68,7 +68,11 @@ router.post('/:user_id/avatar', function(req, res) {
         function(callback) {
             upload(req, res, function(err) {
                 if(err) {
-                    httpResponseUtil.generateResponse(err, false, null, res);
+                    callback(err, null);
+                    return;
+                }
+                if(req.file === undefined) {
+                    callback('COMMON.INVALID_DATA');
                     return;
                 }
                 let fileName = req.file.filename;
@@ -113,7 +117,7 @@ router.get('/', function(req, res) {
                 department_id: 1,
                 position_id: 1,
                 type_employee_id: 1,
-                avatar_url: 1,
+                avatar: 1,
                 dob: 1,
                 address: 1,
                 resident_address: 1,
@@ -437,7 +441,7 @@ function queryBaseInformationAggregate(req) {
                 department_id: 1,
                 position_id: 1,
                 type_employee_id: 1,
-                avatar_url: 1,
+                avatar: 1,
                 gender: 1,
                 dob: 1,
                 address: 1,
@@ -477,7 +481,7 @@ function queryBaseInformationAggregate(req) {
                 position_id: 1,
                 gender: 1,
                 type_employee_id: 1,
-                avatar_url: 1,
+                avatar: 1,
                 dob: 1,
                 address: 1,
                 resident_address: 1,
@@ -518,7 +522,7 @@ function queryBaseInformationAggregate(req) {
                 department_id: 1,
                 position_id: 1,
                 type_employee_id: 1,
-                avatar_url: 1,
+                avatar: 1,
                 dob: 1,
                 address: 1,
                 resident_address: 1,
@@ -561,7 +565,7 @@ function queryBaseInformationAggregate(req) {
                 department_id: 1,
                 position_id: 1,
                 type_employee_id: 1,
-                avatar_url: 1,
+                avatar: 1,
                 dob: 1,
                 address: 1,
                 resident_address: 1,
@@ -605,5 +609,125 @@ function queryBaseInformationAggregate(req) {
     ]
     return baseAggre.concat(limitAggre);
 }
+router.put('/:user_id/password', function(req, res) {
+    let user_id = req.params["user_id"];
+    async.waterfall([
+        //check user_id
+        function(callback) {
+            if(!user_id) {
+                callback('COMMON.MISSING_DATA', 'user_id');
+                return;
+            }
+            if(objectID.isValid(user_id) === false) {
+                callback('COMMON.INVALID_DATA', 'user_id');
+                return;
+            }
+            USER.findOne({_id: user_id}, function(error, data) {
+                if(error) {
+                    callback('ERROR_SERVER');
+                    return;
+                }
+                if(data === null) {
+                    callback('COMMON.INVALID_DATA', 'user_id');
+                    return;
+                }
+                callback(null);
+            })
+        },
+        //check role
+        function(callback) {
+            if(req.role_code === "USER" && req.user_id !== user_id) {
+                callback('COMMON.INVALID_DATA', 'user_id');
+                return;
+            }
+            callback(null);
+        },
+        function(callback) {
+            let requiredFields = [
+                'oldpass',
+                'newpass',
+                'repass'
+            ];
+            let missingFields = [];
+            requiredFields.forEach(function(elem) {
+                if(req.body[elem] === null || req.body[elem] === undefined || req.body[elem].trim().length === 0) {
+                    missingFields.push(elem);
+                }
+            })
+            if(missingFields.length > 0) {
+                callback('COMMON.MISSING_DATA', requiredFields);
+                return;
+            }
+            let wrongFields = [];
+            if(req.body['oldpass'].trim().length < 6) {
+                wrongFields.push('oldpass');
+            }
+            if(req.body['newpass'].trim().length < 6) {
+                wrongFields.push('newpass');
+            }
+            if(req.body['repass'].trim().length < 6) {
+                wrongFields.push('repass');
+            }
+            if(req.body['repass'].trim() !== req.body['newpass'].trim()) {
+                wrongFields.push('repass and newpass');
+            }
+            if(wrongFields.length > 0) {
+                callback('COMMON.INVALID_DATA', wrongFields);
+                return;
+            }
 
+            callback(null);
+        },
+        function(callback) {
+            USER.findOne({_id: user_id}, {password: 1},function(error, data) {
+                if(error) {
+                    callback('ERROR_SERVER');
+                    return;
+                }
+                if(data === null) {
+                    callback('COMMON.INVALID_DATA', 'user_id');
+                    return;
+                }
+                // Load hash from your password DB.
+                bcrypt.compare(req.body['oldpass'], data.password, function(err, result) {
+                    // res == true
+                    if(result === true) {
+                        callback(null);
+                    } else {
+                        callback('COMMON.INVALID_DATA', 'oldpass');
+                        return;
+                    }
+                });
+            })
+        },
+        function(callback) {
+            bcrypt.hash(req.body['newpass'], constants.saltRounds, function(err, hash) {
+                // Store hash in your password DB.
+                if(err) {
+                    callback('ERROR_SERVER');
+                    return;
+                }
+                callback(null, hash);
+            });
+        },
+        function(hash, callback) {
+            USER.findOneAndUpdate({_id: user_id}, {$set: {password: hash, tokens: []}}, function(error, data) {
+                if(error) {
+                    callback('ERROR_SERVER');
+                    return;
+                }
+                callback(null);
+            })
+        },
+        function() {
+            httpResponseUtil.generateResponse('COMMON.SUCCESSFULLY', true, null, res);
+        }
+    ], function(err, data) {
+        if(typeof err === 'string') {
+            httpResponseUtil.generateResponse(err, false, data, res);
+        } else {
+            httpResponseUtil.generateResponse('ERROR_SERVER', false, null, res);
+        }
+    })
+})
 module.exports = router;

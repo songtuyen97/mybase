@@ -211,6 +211,7 @@ router.get('/message/:message_id', function(req, res) {
                     countingMessages--;
                     if(countingMessages === 0) {
                         emitDataToClientWithID(message_data.list_user_id, {message_id: message_data._id}, req);
+                        // emitNotificationOrChatToClient([req.user_id], true, req);
                     }
                 })
             }
@@ -338,6 +339,7 @@ router.post('/message', function(req, res) {
         function(message_id, callback) {
             httpResponseUtil.generateResponse('COMMON.SUCCESSFULLY', true, message_id, res);
             emitDataToClientWithID([req.body["user_id_2"], req.user_id], {message_id: message_id}, req);
+            emitNotificationOrChatToClient([req.body["user_id_2"]], true, req);
         }
     ], function(err, data) {
         if(typeof err === 'string') {
@@ -453,7 +455,22 @@ router.get('/message/search/:user_id_2', function(req, res) {
                         list_user_id: 1,
                         first_name: '$users.first_name',
                         last_name: '$users.last_name',
-                        avatar: '$users.avatar'
+                        avatar: '$users.avatar',
+                    }
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        list_user_id: 1,
+                        type_message: 1,
+                        created_date: 1,
+                        list_user_id: 1,
+                        first_name: 1,
+                        last_name: 1,
+                        avatar: 1,
+                        fullname: {
+                            $concat: ['$last_name', ' ', '$first_name']
+                        }
                     }
                 },
                 {
@@ -476,7 +493,10 @@ router.get('/message/search/:user_id_2', function(req, res) {
                         },
                         avatar: {
                             $first: '$avatar'
-                        }
+                        },
+                        fullname: {
+                            $first: '$fullname'
+                        },
                     }
                 }
                 //limit offset
@@ -522,7 +542,47 @@ function emitDataToClientWithID(arrIDUser = [], data = {}, req) {
         })
     })
 }
+function emitNotificationOrChatToClient(arrIDUser = [], isChat = true, req) {
+    arrIDUser.forEach(function(elem) {
+        if(elem === req.user_id) {
+            return;
+        }
+        USER.findOne({_id: elem}, function(error, user_data) {
+            if(error) {
+                console.log(error);
+                return;
+            }
+            if(user_data !== null && (user_data.socket_chat_id !== null || user_data.socket_chat_id !== undefined) && user_data.length !== 0) {
+                user_data.socket_chat_id.forEach(function(elem_socket_id) {
+                    // buildAggregateForGetMessageText(data.message_id, req, function(error, message_text_data) {
+                    //     if(error) {
+                    //         return;
+                    //     }
+                    //     req.io.to(elem_socket_id).emit('LISTMESSAGETEXT', {message_id: data.message_id, data: message_text_data});
+                    // })
+                    // buildAggregateForGetMessage(req, elem, function(error, message_data) {
+                    //     if(error) {
+                    //         return;
+                    //     }
+                    //     req.io.to(elem_socket_id).emit('LISTUSERCHATED', {data: message_data});
+                    // })
+                    buildAggregateForGetNumberMessageUnread(elem, req, function(error, data) {
+                        if(error) {
+                            return;
+                        }
+                        if(isChat === true) {
+                            req.io.to(elem_socket_id).emit('HAVEMESSAGE', {data: data.length});
+                        }
+                    })
+                    
+                })
+            }
+        })
+    })
+    
+}
 function buildAggregateForGetMessageText(message_id, req, callback) {
+    let offsetLimitQuery_ = generalUtil.retrieveLimitOffsetValue(req);
     MESSAGE_TEXT.aggregate([
         {
             $match: {
@@ -530,10 +590,61 @@ function buildAggregateForGetMessageText(message_id, req, callback) {
             }
         },
         {
+            $lookup: {
+                from: 'users',
+                localField: 'user_id',
+                foreignField: '_id',
+                as: 'users'
+            }
+        },
+        {
+            $unwind: '$users'
+        },
+        {
+            $project: {
+                _id: 1,
+                user_id: 1,
+                content: 1,
+                created_at: 1,
+                message_id: 1,
+                status_viewed: 1,
+                first_name: '$users.first_name',
+                last_name: '$users.last_name',
+                avatar: '$users.avatar',
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                user_id: 1,
+                content: 1,
+                created_at: 1,
+                message_id: 1,
+                status_viewed: 1,
+                first_name: 1,
+                last_name: 1,
+                avatar: 1,
+                fullname: {
+                    $concat: ['$last_name', ' ', '$first_name']
+                }
+            }
+        },
+        {
+            $sort: {
+                created_at: -1
+            }
+        },
+        {
+            $skip: offsetLimitQuery_.offset
+        },
+        {
+            $limit: offsetLimitQuery_.limit
+        },
+        {
             $sort: {
                 created_at: 1
             }
-        }
+        },
         //limit offset
     ], function(error, message_text_data) {
         if(error) {
@@ -593,7 +704,27 @@ function buildAggregateForGetMessage(req, user_id, callback) {
                 list_user_id: 1,
                 first_name: '$users.first_name',
                 last_name: '$users.last_name',
-                avatar: '$users.avatar'
+                avatar: '$users.avatar',
+                active_message: '$users.active_message',
+                fullname: {
+                    $concat: ["$last_name" , " ", "$first_name"]
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                list_user_id: 1,
+                type_message: 1,
+                created_date: 1,
+                list_user_id: 1,
+                first_name: 1,
+                last_name: 1,
+                avatar: 1,
+                active_message: 1,
+                fullname: {
+                    $concat: ["$last_name" , " ", "$first_name"]
+                }
             }
         },
         {
@@ -609,13 +740,19 @@ function buildAggregateForGetMessage(req, user_id, callback) {
                     $first: '$created_date'
                 },
                 first_name: {
-                    $first: '$first_name'
+                    $push: '$first_name'
                 },
                 last_name: {
-                    $first: '$last_name'
+                    $push: '$last_name'
+                },
+                fullname: {
+                    $push: '$fullname'
                 },
                 avatar: {
                     $first: '$avatar'
+                },
+                active_message: {
+                    $first: '$active_message'
                 }
             }
         },
@@ -628,7 +765,10 @@ function buildAggregateForGetMessage(req, user_id, callback) {
             }
         },
         {
-            $unwind: '$message_text'
+            $unwind: {
+                path: '$message_text',
+                preserveNullAndEmptyArrays: true
+            }
         },
         {
             $project: {
@@ -638,12 +778,12 @@ function buildAggregateForGetMessage(req, user_id, callback) {
                 first_name: 1,
                 last_name: 1,
                 avatar: 1,
+                active_message: 1,
                 content_text: '$message_text.content',
                 status_viewed_text: '$message_text.status_viewed',
                 created_at_text: '$message_text.created_at',
-                fullname: {
-                    $concat: ["$last_name" , " ", "$first_name"]
-                }
+                user_id_text: '$message_text.user_id',
+                fullname: 1
             }
         },
         {
@@ -669,6 +809,9 @@ function buildAggregateForGetMessage(req, user_id, callback) {
                 created_at_text: {
                     $last: '$created_at_text'
                 },
+                user_id_text: {
+                    $last: '$user_id_text'
+                },
                 first_name: {
                     $first: '$first_name'
                 },
@@ -680,6 +823,9 @@ function buildAggregateForGetMessage(req, user_id, callback) {
                 },
                 fullname: {
                     $first: '$fullname'
+                },
+                active_message: {
+                    $first: '$active_message'
                 }
             }
         },
@@ -693,4 +839,354 @@ function buildAggregateForGetMessage(req, user_id, callback) {
         callback(error, data);
     })
 }
+function buildAggregateForGetNumberMessageUnread(user_id, req, callback) {
+    MESSAGE.aggregate([
+        {
+            $match: {
+                list_user_id: objectID(user_id)
+            }
+        },
+        {
+            $unwind: '$list_user_id'
+        },
+        {
+            $project: {
+                _id: 1,
+                list_user_id: 1,
+                type_message: 1,
+                created_date: 1,
+                list_user_id: '$list_user_id'
+            }
+        },
+        {
+            $match: {
+                // $not: [{list_user_id: objectID(req.user_id)}]    
+                list_user_id: {$ne: objectID(user_id)}     
+            }
+        },
+        {
+            $lookup: {
+                from: 'users',
+                localField: 'list_user_id',
+                foreignField: '_id',
+                as: 'users'
+            }
+        },
+        {
+            $unwind: '$users'
+        },
+        {
+            $project: {
+                _id: 1,
+                list_user_id: 1,
+                type_message: 1,
+                created_date: 1,
+                list_user_id: 1,
+                first_name: '$users.first_name',
+                last_name: '$users.last_name',
+                avatar: '$users.avatar',
+                active_message: '$users.active_message',
+                fullname: {
+                    $concat: ["$last_name" , " ", "$first_name"]
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                list_user_id: 1,
+                type_message: 1,
+                created_date: 1,
+                list_user_id: 1,
+                first_name: 1,
+                last_name: 1,
+                avatar: 1,
+                active_message: 1,
+                fullname: {
+                    $concat: ["$last_name" , " ", "$first_name"]
+                }
+            }
+        },
+        {
+            $group: {
+                _id: '$_id',
+                list_user_id: {
+                    $push: "$list_user_id"
+                },
+                type_message: {
+                    $first: '$type_message'
+                },
+                created_date: {
+                    $first: '$created_date'
+                },
+                first_name: {
+                    $push: '$first_name'
+                },
+                last_name: {
+                    $push: '$last_name'
+                },
+                fullname: {
+                    $push: '$fullname'
+                },
+                avatar: {
+                    $first: '$avatar'
+                },
+                active_message: {
+                    $first: '$active_message'
+                }
+            }
+        },
+        {
+            $lookup: {
+                from: 'message_text',
+                localField: '_id',
+                foreignField: 'message_id',
+                as: 'message_text'
+            }
+        },
+        {
+            $unwind: {
+                path: '$message_text',
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                list_user_id: 1,
+                type_message: 1,
+                first_name: 1,
+                last_name: 1,
+                avatar: 1,
+                active_message: 1,
+                content_text: '$message_text.content',
+                status_viewed_text: '$message_text.status_viewed',
+                created_at_text: '$message_text.created_at',
+                user_id_text: '$message_text.user_id',
+                fullname: 1
+            }
+        },
+        {
+            $sort: {
+                created_at_text: 1
+            }
+        },
+        {
+            $group: {
+                _id: '$_id',
+                list_user_id: {
+                    $first: '$list_user_id'
+                },
+                type_message: {
+                    $first: '$type_message'
+                },
+                content_text: {
+                    $last: '$content_text'
+                },
+                status_viewed_text: {
+                    $last: '$status_viewed_text'
+                },
+                created_at_text: {
+                    $last: '$created_at_text'
+                },
+                user_id_text: {
+                    $last: '$user_id_text'
+                },
+                first_name: {
+                    $first: '$first_name'
+                },
+                last_name: {
+                    $first: '$last_name'
+                },
+                avatar: {
+                    $first: '$avatar'
+                },
+                fullname: {
+                    $first: '$fullname'
+                },
+                active_message: {
+                    $first: '$active_message'
+                },
+                
+            }
+        },
+        // {
+        //     $sort: {
+        //         created_at_text: -1
+        //     }
+        // },
+        {
+            $match: {
+                // $not: [{list_user_id: objectID(req.user_id)}]    
+                $and: [{user_id_text: {$ne: objectID(user_id)}}, {'status_viewed_text.status': false}]
+            }
+        },
+        //limit offset
+    ], function(error, data) {
+        callback(error, data);
+    })
+}
+router.post('/message/group', function(req, res) {
+    async.waterfall([
+        function(callback) {
+            let requiredFields = [
+                'list_user_id'
+            ]
+            let missingFields = [];
+            requiredFields.forEach(function(elem) {
+                if(req.body[elem] === null || req.body[elem] === undefined || req.body[elem].length === 0) {
+                    missingFields.push(elem);
+                }
+            })
+            if(missingFields.length > 0) {
+                callback('COMMON.MISSING_DATA', missingFields);
+                return;
+            }
+            let wrongFields = [];
+            if(Array.isArray(req.body['list_user_id']) === false || req.body['list_user_id'].length < 2) {
+                wrongFields.push('list_user_id');
+            }
+            if(Array.isArray(req.body['list_user_id']) === true) {
+                let countingWrongValue = 0;
+                req.body['list_user_id'].forEach(function(elem) {
+                    if(objectID.isValid(elem) === false) {
+                        countingWrongValue++;
+                    }
+                })
+                if(countingWrongValue > 0) {
+                    wrongFields.push('list_user_id');
+                }
+            }
+            if(wrongFields.length > 0) {
+                callback('COMMON.INVALID_DATA', wrongFields);
+                return;
+            }
+            callback(null);
+        },
+        //check existing of list_user_id
+        function(callback) {
+            let covertedFields = req.body['list_user_id'].map(function(elem) {
+                return objectID(elem);
+            })
+            USER.find({_id: {$in: covertedFields}}, function(error, user_data) {
+                if(error) {
+                    callback('ERROR_SERVER', null);
+                    return;
+                }
+                if(user_data.length !== req.body['list_user_id'].length) {
+                    callback('COMMON.INVALID_DATA', 'list_user_id');
+                    return;
+                }
+                callback(null);
+            })
+        },
+        function(callback) {
+            //add my id into list_user_id
+            req.body['list_user_id'].push(req.user_id);
+            //format
+            let formatingInputData = {
+                list_user_id: req.body['list_user_id'],
+                type_message: constants.message_group.type_message_code,
+                date: new Date()
+            }
+            MESSAGE.create(formatingInputData, function(error, message_data) {
+                if(error) {
+                    callback('ERROR_SERVER', null);
+                    return;
+                }
+                //call success
+                httpResponseUtil.generateResponse('COMMON.SUCCESSFULLY', true, null, res);
+                emitDataToClientWithID(req.body['list_user_id'], {message_id: message_data._id}, req);
+            })
+        }
+    ], function(err, data) {
+        if(typeof err === 'string') {
+            httpResponseUtil.generateResponse(err, false, data, res);
+        } else {
+            httpResponseUtil.generateResponse('ERROR_SERVER', false, null, res);
+        }
+    })
+})
+router.post('/message/group/:message_id', function(req, res) {
+    let message_id = req.params['message_id'];
+    async.waterfall([
+        //validator fields input
+        function(callback) {
+            let requiredFields = [
+                'content'
+            ]
+            let missingFields = [];
+            requiredFields.forEach(function(elem) {
+                if(req.body[elem] === null || req.body[elem] === undefined || req.body[elem].trim().length === 0) {
+                    missingFields.push(elem);
+                }
+            })
+            if(message_id === undefined || message_id === null || message_id.trim().length === 0) {
+                missingFields.push('message_id');
+            }
+            if(missingFields.length > 0) {
+                callback('COMMON.MISSING_DATA', missingFields);
+                return;
+            }
+            let wrongFields = [];
+            if(objectID.isValid(message_id) === false) {
+                wrongFields.push('message_id');
+            }
+            if(wrongFields.length > 0) {
+                callback('COMMON.INVALID_DATA', missingFields);
+                return;
+            }
+            callback(null);
+        },
+        //check existing of message_id
+        function(callback) {
+            MESSAGE.findOne({_id: message_id, type_message: constants.message_group.type_message_code}, function(error, message_data) {
+                if(error) {
+                    callback('ERROR_SERVER', null);
+                    return;
+                }
+                if(message_data === null) {
+                    callback('COMMON.INVALID_DATA', 'message_id');
+                    return;
+                }
+                callback(null, message_data);
+            })
+        },
+        //CREATE new message_text document
+        function(message_data, callback) {
+            let formatData = {
+                message_id: message_id,
+                content: req.body['content'],
+                user_id: req.user_id,
+                created_at: new Date()
+            }
+            MESSAGE_TEXT.create(formatData, function(error) {
+                if(error) {
+                    callback('ERROR_SERVER', null);
+                    return;
+                }
+                httpResponseUtil.generateResponse('COMMON.SUCCESSFULLY', true, null, res);
+                emitDataToClientWithID(message_data['list_user_id'], {message_id: message_data['_id']}, req);
+                emitNotificationOrChatToClient(message_data['list_user_id'], true, req);
+            })
+        }
+    ], function(err, data) {
+        if(typeof err === 'string') {
+            httpResponseUtil.generateResponse(err, false, data, res);
+        } else {
+            httpResponseUtil.generateResponse('ERROR_SERVER', false, null, res);
+        }
+    })
+})
+router.get('/messageheader', function(req, res) {
+    // console.log('this');
+    buildAggregateForGetNumberMessageUnread(req.user_id, req, function(error, data) {
+        if(error) {
+            httpResponseUtil.generateResponse('ERROR_SERVER', false, null, res);
+            return;
+        }
+        
+        httpResponseUtil.generateResponse('COMMON.SUCCESSFULLY', true, data.length, res);
+    })
+})
 module.exports = router;

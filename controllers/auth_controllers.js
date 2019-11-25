@@ -38,7 +38,7 @@ router.post('/login', function(req, res) {
         function(callback) {
             dbUtil.getDocumentWithCondition(
               { username: req.body["username"] },
-              { first_name: 1, last_name: 1, middle_name: 1, username: 1, password: 1 },
+              { first_name: 1, last_name: 1, middle_name: 1, username: 1, password: 1, role_code: 1, avatar: 1 },
               USER,
               function(user) {
                 if (user === "ERROR_SERVER") {
@@ -70,7 +70,7 @@ router.post('/login', function(req, res) {
         //register token for user 
         function(user_Base, callback) {
             user_Base.password = undefined;
-            let token = jwt.sign({_id: user_Base._id}, constants.encodeJWT, { expiresIn: '600h' });
+            let token = jwt.sign({_id: user_Base._id, role_code: user_Base.role_code}, constants.encodeJWT, { expiresIn: '600h' });
             USER.findOne({_id: user_Base._id}, function(err, user) {
                 if(err) {
                     callback('ERROR_SERVER');

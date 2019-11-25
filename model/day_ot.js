@@ -25,6 +25,10 @@ let dayOTSchema = new Schema({
     license: {
         type: Boolean,
         required: false
+    },
+    created_date: {
+        type: Date,
+        required: false
     }
 })
 

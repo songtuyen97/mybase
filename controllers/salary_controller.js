@@ -762,17 +762,49 @@ router.put('/timekeeping/:user_id', function(req, res) {
           callback('ERROR_SERVER', null);
           return;
         }
+        //check role
+        if(req.role_code === constants.role_code.user) {
+          if(req.user_id !== user_id) {
+            callback('COMMON.INVALID_DATA', 'user_id')
+            return;
+          };
+          // callback(null, null);
+        }
         //check document is exist => next func to creating new document
         if(off_data === null) {
           callback(null, 'CREATE');
           return;
         }
         //nothing
-        if(req.body['ischecked'] === true) {
-          callback('COMMON.INVALID_DATA', null);
-        } else {
-          callback(null, 'DELETE');
+        // if(req.body['ischecked'] === true) {
+        //   callback('COMMON.INVALID_DATA', null);
+        // } else {
+        //   callback(null, 'DELETE');
+        // }
+
+        if(req.role_code === constants.role_code.admin) {
+          if(req.body['ischecked'] === true && off_data.license === true) {
+            callback('COMMON.INVALID_DATA', null);
+            return;
+          } 
+          if(req.body['ischecked'] === true && (off_data.license === false || off_data.license === undefined)) {
+            callback(null, 'UPDATE');
+            return;
+          } 
+          if(req.body['ischecked'] === false && off_data.license === false) {
+            callback('COMMON.INVALID_DATA', null);
+            return;
+          } 
+          if(req.body['ischecked'] === false && (off_data.license === true || off_data.license === undefined)) {
+            callback(null, 'UPDATE');
+            return;
+          }
+          // else {
+          //   callback(null, 'DELETE');
+          // }
+          
         }
+        callback(null, null);
         
       })
     },
@@ -781,22 +813,27 @@ router.put('/timekeeping/:user_id', function(req, res) {
         //create field for day_off
         req.body.user_id = user_id;
         //can check for admin
-        req.body.license = true;
-        
+        if(req.role_code === constants.role_code.admin) {
+          req.body.license = true;
+        }
         if(req.body["ismorning_session"]) {
           req.body.hours = constants.hours_offmorning;
         } else {
           req.body.hours = constants.hours_offafternoon;
         }
-
+        req.body.created_date = new Date();
         DAYOFF.create(req.body, function(err) {
           if(err) {
             callback('ERROR_SERVER', null);
             return;
           }
+          //emit data to specific client
+          if(req.role_code === constants.role_code.user) {
+            //emit to admin
+          }
           callback(null);
         })
-      } else {
+      } else if(status === 'DELETE') {
         DAYOFF.findOneAndDelete({user_id: user_id, date: req.body["date"], ismorning_session: req.body["ismorning_session"]}, function(err) {
           if(err) {
             callback('ERROR_SERVER', null);
@@ -804,9 +841,33 @@ router.put('/timekeeping/:user_id', function(req, res) {
           }
           callback(null);
         })
+      } else if(status === 'UPDATE') {
+        //handle data input DB
+        if(req.body["ismorning_session"]) {
+          req.body.hours = constants.hours_offmorning;
+        } else {
+          req.body.hours = constants.hours_offafternoon;
+        }
+        req.body.license = req.body['ischecked'];
+        //
+        DAYOFF.findOneAndUpdate({user_id: user_id, date: req.body["date"], ismorning_session: req.body["ismorning_session"]}, {$set: req.body}, function(err) {
+          if(err) {
+            callback('ERROR_SERVER', null);
+            return;
+          }
+          callback(null);
+        })
+      } else {
+        callback(null);
       }
     },
     function(callback) {
+      if(req.role_code === 'USER') {
+        emitNotificationDataToUser(true, null, req);
+      }
+      if(req.role_code === 'ADMIN') {
+        emitNotificationDataToUser(false, user_id, req);
+      }
       httpResponseUtil.generateResponse('COMMON.SUCCESSFULLY', true, null, res);
     }
   ], function(err, data) {
@@ -879,17 +940,50 @@ router.put('/timekeeping/ot/:user_id', function(req, res) {
           callback('ERROR_SERVER', null);
           return;
         }
+        //check role
+        if(req.role_code === constants.role_code.user) {
+          if(req.user_id !== user_id) {
+            callback('COMMON.INVALID_DATA', 'user_id')
+            return;
+          };
+          // callback(null, null);
+        }
         //check document is exist => next func to creating new document
         if(ot_data === null) {
           callback(null, 'CREATE');
           return;
         }
         //nothing
-        if(req.body['ischecked'] === true) {
-          callback('COMMON.INVALID_DATA', null);
-        } else {
-          callback(null, 'DELETE');
+        if(req.role_code === constants.role_code.admin) {
+          if(req.body['ischecked'] === true && ot_data.license === true) {
+            callback('COMMON.INVALID_DATA', null);
+            return;
+          } 
+          if(req.body['ischecked'] === true && (ot_data.license === false || ot_data.license === undefined)) {
+            callback(null, 'UPDATE');
+            return;
+          } 
+          if(req.body['ischecked'] === false && ot_data.license === false) {
+            callback('COMMON.INVALID_DATA', null);
+            return;
+          } 
+          if(req.body['ischecked'] === false && (ot_data.license === true || ot_data.license === undefined)) {
+            callback(null, 'UPDATE');
+            return;
+          }
+          // else {
+          //   callback(null, 'DELETE');
+          // }
+          
         }
+        callback(null, null);
+        // if(req.body['ischecked'] === true && ot_data.license === true) {
+        //   callback('COMMON.INVALID_DATA', null);
+        // } else if(req.body['ischecked'] === true && ot_data.license === false) {
+        //   callback(null, 'UPDATE');
+        // } else {
+        //   callback(null, 'DELETE');
+        // }
         
       })
     },
@@ -898,8 +992,9 @@ router.put('/timekeeping/ot/:user_id', function(req, res) {
         //create field for day_off
         req.body.user_id = user_id;
         //can check for admin
-        req.body.license = true;
-        
+        if(req.role_code === constants.role_code.admin) {
+          req.body.license = true;
+        }
         //handle effecient of ot
         if(req.body["isholiday"] === true) {
           req.body.coefficient = constants.coefficientHoliday;
@@ -912,16 +1007,20 @@ router.put('/timekeeping/ot/:user_id', function(req, res) {
             req.body.coefficient = constants.coefficientNormal;
           }
         }
-
+        req.body.created_date = new Date();
         //
         DAYOT.create(req.body, function(err) {
           if(err) {
             callback('ERROR_SERVER', null);
             return;
           }
+          //emit data to specific client
+          if(req.role_code === constants.role_code.user) {
+            //emit to admin
+          } 
           callback(null);
         })
-      } else {
+      } else if(status === 'DELETE') {
         DAYOT.findOneAndDelete({user_id: user_id, date: req.body["date"]}, function(err) {
           if(err) {
             callback('ERROR_SERVER', null);
@@ -929,9 +1028,40 @@ router.put('/timekeeping/ot/:user_id', function(req, res) {
           }
           callback(null);
         })
+      } else if(status === 'UPDATE') {
+
+        if(req.body["isholiday"] === true) {
+          req.body.coefficient = constants.coefficientHoliday;
+        } else {
+          //get weekend
+          let date = new Date(req.body["date"]);
+          if(date.getDay() === 0 || date.getDay() === 6) {
+            req.body.coefficient = constants.coefficientWeekend;
+          } else {
+            req.body.coefficient = constants.coefficientNormal;
+          }
+        }
+        req.body.license = req.body['ischecked'];
+
+        DAYOT.findOneAndUpdate({user_id: user_id, date: req.body["date"]}, {$set: req.body}, function(err) {
+          if(err) {
+            callback('ERROR_SERVER', null);
+            return;
+          }
+          callback(null);
+        })
+      } else {
+        callback(null);
       }
+
     },
     function(callback) {
+      if(req.role_code === 'USER') {
+        emitNotificationDataToUser(true, null, req);
+      }
+      if(req.role_code === 'ADMIN') {
+        emitNotificationDataToUser(false, user_id, req);
+      }
       httpResponseUtil.generateResponse('COMMON.SUCCESSFULLY', true, null, res);
     }
   ], function(err, data) {
@@ -942,4 +1072,33 @@ router.put('/timekeeping/ot/:user_id', function(req, res) {
     }
   })
 })
+function emitNotificationDataToUser(toAdmin, user_id, req) {
+  console.log(toAdmin + '/' + user_id);
+  if(toAdmin === false) {
+    USER.findOne({_id: user_id}, function(error, user_data) {
+      if(error || !user_data || !user_data['socket_notification_id'] || Array.isArray(user_data['socket_notification_id']) === false) {
+        return;
+      }
+      
+      user_data['socket_notification_id'].forEach(function(elem_socket_id) {
+        req.io.to(elem_socket_id).emit('RELOADNOTI', {status: true});
+      })
+    })
+  }
+  if(toAdmin === true) {
+    USER.find({role_code: 'ADMIN'}, function(error, user_data) {
+      if(error || !user_data || Array.isArray(user_data) === false) {
+        return;
+      }
+      user_data.forEach(function(elem_user) {
+        if(!elem_user['socket_notification_id']) {
+          return;
+        }
+        elem_user['socket_notification_id'].forEach(function(elem_socket_id) {
+          req.io.to(elem_socket_id).emit('RELOADNOTI', {status: true});
+        })
+      })
+    })
+  }
+}
 module.exports = router;

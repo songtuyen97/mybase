@@ -22,6 +22,14 @@ let constants = {
     message_group: {
         type_message_name: 'nhom',
         type_message_code: 'GROUP'
+    },
+    role_code: {
+        user: 'USER',
+        admin: 'ADMIN'
+    },
+    notification_type: {
+        ot: 'ot',
+        off: 'off'
     }
 }
 module.exports = constants;
