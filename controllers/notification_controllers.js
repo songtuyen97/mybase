@@ -302,7 +302,7 @@ router.get('/', function(req, res) {
                     type: constants.notification_type.ot,
                     created_date: elem.created_date ? elem.created_date : new Date('1977-1-1'),
                     date: elem.date,
-                    content: 'Đã xin làm thêm ngày',
+                    content: 'Đã xin làm thêm',
                     hours: elem.hours,
                     dob: elem.dob,
                     email: elem.email,

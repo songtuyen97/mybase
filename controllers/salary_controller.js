@@ -119,7 +119,34 @@ router.get("/", function(req, res) {
               },
               avatar: 1,
               dob: 1,
-              working: 1
+              working: 1,
+              type_employee_id: 1
+            }
+          },
+          {
+            $lookup: {
+              from: 'type_employee',
+              localField: 'type_employee_id',
+              foreignField: '_id',
+              as: 'type_employee'
+            }
+          },
+          {
+            $unwind: '$type_employee'
+          },
+          {
+            $project: {
+              _id: 1,
+              first_name: 1,
+              last_name: 1,
+              email: 1,
+              fullname: 1,
+              avatar: 1,
+              dob: 1,
+              working: 1,
+              type_employee_id: 1,
+              type_employee_name: '$type_employee.type_employee_name',
+              type_employee_code: '$type_employee.type_employee_code'
             }
           },
           {
@@ -240,18 +267,20 @@ router.get("/", function(req, res) {
           if (isFindingAdvancePayment === false) {
             elem_user.advance_payment = 0;
           }
-          //warranty
-          let isFindingWarranty = false;
-          warranty_data.forEach(function(elem_warranty) {
-            if (String(elem_user._id) == String(elem_warranty._id)) {
-              elem_user.warranty = elem_warranty.warranty_money;
-              isFindingWarranty = true;
-              return;
-            }
-          })
-          if (isFindingWarranty === false) {
-            elem_user.warranty = 0;
-          }
+          //warranty old
+          // let isFindingWarranty = false;
+          // warranty_data.forEach(function(elem_warranty) {
+          //   if (String(elem_user._id) == String(elem_warranty._id)) {
+          //     elem_user.warranty = elem_warranty.warranty_money;
+          //     isFindingWarranty = true;
+          //     return;
+          //   }
+          // })
+          // if (isFindingWarranty === false) {
+          //   elem_user.warranty = 0;
+          // }
+         
+
           //salary
           let isFindingSalary = false;
           salary_data.forEach(function(elem_salary) {
@@ -264,6 +293,13 @@ router.get("/", function(req, res) {
           if (isFindingSalary === false) {
             elem_user.salary = 0;
           }
+          //warranty new
+          if(elem_user.type_employee_code === 'CHINHTHUC') {
+            elem_user.warranty = 0.15 * elem_user.salary;
+          } else {
+            elem_user.warranty = 0
+          }
+          
           //off
           let isFindingOFF = false;
           off_data.forEach(function(elem_off) {
@@ -298,7 +334,7 @@ router.get("/", function(req, res) {
           for(let i = 1; i <= numberDateInMonth; i++) {
             let day = new Date(year + '-' + month + '-' + i).getDay();
             //if day = sunday
-            if(day == 0) {
+            if(day == 0 || day == 6) {
               weekendNumber++;
             }
           }
@@ -314,7 +350,7 @@ router.get("/", function(req, res) {
             for(let i = 1; i <= new Date().getDate(); i++) {
               let day = new Date(year + '-' + month + '-' + i).getDay();
               //if day = sunday
-              if(day == 0) {
+              if(day == 0 || day == 6) {
                 weekendNumber_current++;
               }
             }
@@ -324,12 +360,16 @@ router.get("/", function(req, res) {
 
           elem_user.workhourandworkday = elem_user.workhour + '/' + elem_user.workday;
           //calculation money of month
+          let save_salary = elem_user.salary;
+          if(elem_user.type_employee_code === 'THUVIEC' && elem_user.salary !== undefined) {
+            elem_user.salary *= 80/100; 
+          }
           if(elem_user.salary !== undefined) {
             elem_user.salary_month = parseInt(
               ((elem_user.salary/(workdayInMonth * constants.workhourinday)) * elem_user.workhour) - elem_user.advance_payment - elem_user.warranty
             );
           }
-          
+          elem_user.salary = save_salary;
         });
 
         httpResponseUtil.generateResponse(
@@ -921,7 +961,7 @@ router.put('/timekeeping/ot/:user_id', function(req, res) {
       // console.log(typeof  req.body["date"]);
       // if(typeof  req.body["date"] === 'date')
       if(typeof req.body["hours"] === 'Number') {
-        wrongFields.push("ismorning_session");
+        wrongFields.push("hours");
       }
       if(typeof req.body["ischecked"] === 'Boolean') {
         wrongFields.push("ischecked");

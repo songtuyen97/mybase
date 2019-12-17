@@ -38,7 +38,7 @@ router.post('/login', function(req, res) {
         function(callback) {
             dbUtil.getDocumentWithCondition(
               { username: req.body["username"] },
-              { first_name: 1, last_name: 1, middle_name: 1, username: 1, password: 1, role_code: 1, avatar: 1 },
+              { first_name: 1, last_name: 1, middle_name: 1, username: 1, password: 1, role_code: 1, avatar: 1, working: 1 },
               USER,
               function(user) {
                 if (user === "ERROR_SERVER") {
@@ -52,6 +52,13 @@ router.post('/login', function(req, res) {
                 callback(null, user);
               }
             );
+        },
+        function(user, callback) {
+          if(user.working === false) {
+            callback('AUTH.USER_NOT_FOUND', null);
+            return;
+          }
+          callback(null, user)
         },
         //compare password
         function(user, callback) {
